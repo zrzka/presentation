@@ -1,0 +1,202 @@
+#+Title: Serverless & AWS
+#+Email: robertvojta
+
+#+OPTIONS: toc:nil num:nil
+#+OPTIONS: reveal_slide_number:nil
+
+#+OPTIONS: reveal_width:1920 reveal_height:1080
+#+OPTIONS: reveal_center:t reveal_progress:nil
+
+#+REVEAL_PLUGINS: (highlight markdown)
+#+REVEAL_ROOT: http://cdn.jsdelivr.net/reveal.js/3.0.0/
+
+* Serverless
+
+- První použití pojmu v roce 2012
+- 2014 Amazon představuje AWS Lambda
+- 2015 přidává API Gateway
+- A najednou je toho plný internet
+- Co to vlastně znamená?
+- Každý se pod tím představuje trochu něco jiného
+
+** Serverless
+
+- Ze začátku šlo o aplikace využívající služeb třetích stran
+- Služeb, které řeší nejen logiku, ale drží si i stav
+- Příkladem může být [[https://aws.amazon.com/cognito/][AWS Cognito]]
+- [[https://en.wikipedia.org/wiki/Mobile_backend_as_a_service][(Mobile) Backend as a Service]]
+- In the cloud
+
+** Serverless
+
+- [[https://en.wikipedia.org/wiki/Function_as_a_Service][Function as a Service]]
+- Funkce spouštěné v bezstavových kontejnerech
+- Na základě událostí, jsou efemérní, ...
+- Spravované třetí stranou
+- Příkladem může být [[https://aws.amazon.com/lambda/][AWS Lambda]]
+
+** Co není serverless?
+
+Každý požadavek znamená, že se celá aplikace spustí, vyřeší co je potřeba
+a zase se ukončí. Pokud tomu tak není, jde spíše o PaaS (Platform as a
+Service) - Heroku.
+
+** Výhody
+
+- Snížení nákladů
+- Správa serverů, databází, ...
+- Integrace existujících BaaS (Auth0, Cognito, ...)
+- Automatické škálování
+- Jednodušší správa? Toť otázka :)
+
+** Nevýhody
+
+- Vše kontroluje provozovatel
+- Problém s multitenancí
+- Bez zásadních změn nezmigrujete jinam
+- Bezpečnost
+- Copy & paste logiky do různých aplikací
+- Špatně se optimalizuje
+
+** Nevýhody
+
+- Konfigurace
+- Různá omezení v rámci jednoho účtu (AWS)
+- Doba běhu, latence
+- Testování
+
+** Testování
+
+- Unit testy jsou v pohodě
+- Jsou to jednoúčelové funkce
+- Integrační testy? Trochu peklo
+- Nejste schopni lokálně nasimulovat
+- Další účet, další prostředí, ...
+
+* FaaS
+
+- Spouštění kódu bez vlastních serverů
+- Platí se pouze za spotřebovaný čas
+- Nulová administrace, horizontální škálování
+- Spouštění na základě událostí
+
+** Hallo world!
+
+#+BEGIN_SRC python
+def handler(event, context):
+    return {
+        'message': 'Hallo world!'
+    }
+#+END_SRC
+
+** V čem, jak, za co
+
+- Node.js, Python, Java, .NET
+- Platí se za každých započatých 100ms
+- [[https://aws.amazon.com/lambda/pricing/][Cena]] podle velikosti RAM (~= rychlost CPU)
+- Běží v kontejnerech ([[http://docs.aws.amazon.com/lambda/latest/dg/current-supported-versions.html][Linux AMI]])
+
+** Limity
+
+- Maximální doba běhu 5 minut
+- Max 1024 procesů
+- Max 0,5 GB v /tmp
+- Max 128 kB payload (Event), 6 MB odpověď
+- Max 400 paralelních exekucí
+- [[http://docs.aws.amazon.com/lambda/latest/dg/limits.html][Více informací]]
+
+** Stavy
+
+- Znovupoužití kontejneru do ~15min
+- Možnost cachování dat v /tmp (0,5GB)
+- Minimálně jednou za den se kontejner zahodí
+- [[http://docs.aws.amazon.com/lambda/latest/dg/intro-core-components.html#intro-core-components-event-sources][Různé zdroje událostí]]
+
+** Latence
+
+- Relativně vysoká latence
+- Běžně pár desítek milisekund
+- V kombinaci s API Gateway stovky
+- V kombinaci s VPC i jednotky sekund
+- [[https://robertvojta.com/aws-journey-api-gateway-lambda-vpc-performance-452c6932093b][API Gateway, VPC, Lambda performance]]
+
+** Doba běhu
+
+#+ATTR_HTML: :height 60%, :width 60%
+[[./img/histogram.png]]
+
+** Doba běhu
+
+#+ATTR_HTML: :height 60%, :width 60%
+[[./img/histogram-zoom.png]]
+
+** Znovupoužití kontejneru
+
+#+ATTR_HTML: :height 60%, :width 60%
+[[./img/reuse.png]]
+
+** SDK, další nástroje
+
+- [[https://aws.amazon.com/sdk-for-node-js/][AWS SDK for Node.js]]
+- [[https://aws.amazon.com/sdk-for-java/][AWS SDK for Java]]
+- [[https://boto3.readthedocs.io/en/latest/][Boto3 for Python]]
+- [[https://github.com/nervous-systems/cljs-lambda][CLJS Lambda for ClojureScript]]
+- [[https://aws.amazon.com/cli/][AWS Command Line Interface]]
+
+
+* API Gateway
+
+#+ATTR_HTML: :height 60%, :width 60%
+[[./img/api-gateway-diagram.png]]
+
+** API Gateway
+
+- Tvorba vlastních API
+- Zabezpečení pomocí authorizerů / IAM rolí
+- API klíčů (throttling)
+- Klikací peklo, naštěstí podporuje YAML, JSON
+- Tam se zase upíšete k smrti, raději [[https://github.com/purposefly/scripta][skriptujete]]
+
+* Úložiště
+
+- [[https://aws.amazon.com/s3/][S3 Simple Storage Service]]
+- [[https://aws.amazon.com/dynamodb/][NoSQL databáze DynamoDB]]
+- [[https://aws.amazon.com/rds/][RDS - PostgreSQL, MySQL, Aurora, ...]]
+
+** DynamoDB
+
+- NoSQL databáze
+- Latence v řádech milisekund
+- Plně ve správě Amazonu
+- Ukládání dokumentů na základě klíče
+
+** Kapacita pro čtení / zápis
+
+- [[http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ProvisionedThroughput.html][Provisioned Throughput]]
+- 1 čtecí jednotka
+    - 1 konzistentní čtení do 4kB
+    - 2 čtení do 4kB
+- 1 zapisovací jednotka
+    - 1kB
+- Indexy je také spotřebovávají 
+- Alchymie to spočítat
+- Kapacitu lze navýšovat neomezeně
+- Směrem dolů asi 3x za den
+- Škálování kapacity je na vás
+
+* CloudFormation
+
+- Šablony na celou infrastrukturu
+- Nelze měnit ručně
+- Zajistí 100% shodu vývojového prostředí s produkčním
+- Bohužel neumí vše, skriptování, ...
+
+* Stav, budoucnost
+
+- Stále nové
+- Všechno, včetně AWS, je moc syrové, pracné
+- Chybí návrhové vzory
+- Abstraktní implementace ([[https://serverless.com/][Serverless]], ...) v plenkách
+- Nástroje nedostačují
+
+
